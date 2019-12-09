@@ -1,15 +1,5 @@
-# UnityOculusQuestEssentials
+# VR Draw (A Draw Oculus Experience)
 
-A variety of examples while making tutorial videos for the Oculus Quest with Unity3d. The Break down of videos and results are shown below:
+An open source project demonstrating how to draw in virtual reality. This project contains initial implementation of networking TCP server and client where clients can send what each draws to other clients.
 
-Watch the Oculus Quest Essential Video Series in [YouTube](https://www.youtube.com/watch?v=Wnu0zm0elHU&list=PLQMQNmwN3FvzFLpLRxA8Xa1zRypFeVav5)
-
-Results from various examples taught in YouTube:
-
-- VR Movement Scene
-
-![image](https://github.com/dilmerv/UnityOculusQuestEssentials/blob/master/docs/images/vrmovement.gif)
-
-- VR Controller With Jump and Double Speed Run
-
-![image](https://github.com/dilmerv/UnityOculusQuestEssentials/blob/master/docs/images/vrcontroller.gif)
+As a way to give back please consider subscribing to my [YouTube channel](https://www.youtube.com/c/dilmervalecillos?sub_cofirmation=1) thank you !
