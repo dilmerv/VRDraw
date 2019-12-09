@@ -58,7 +58,7 @@ partial class OculusBuildApp : EditorWindow
 		AssetDatabase.SaveAssets();
 	}
 
-#if UNITY_EDITOR_WIN && UNITY_2018_1_OR_NEWER && UNITY_ANDROID
+#if UNITY_EDITOR_WIN && UNITY_2018_3_OR_NEWER && UNITY_ANDROID
 	// Build setting constants
 	const string REMOTE_APK_PATH = "/sdcard/Oculus/Temp";
 	const float USB_TRANSFER_SPEED_THRES = 25.0f;
@@ -198,7 +198,7 @@ partial class OculusBuildApp : EditorWindow
 		buildFailed = true;
 	}
 
-	[MenuItem("Oculus/OVR Build And Run", false, 10)]
+	[MenuItem("Oculus/OVR Build/OVR Build APK And Run #b", false, 20)]
 	static void StartBuildAndRun()
 	{
 		EditorWindow.GetWindow(typeof(OculusBuildApp));
@@ -333,7 +333,7 @@ partial class OculusBuildApp : EditorWindow
 					if (e.Data.Contains("SUCCESSFUL"))
 					{
 						UnityEngine.Debug.LogFormat("APK Build Completed: {0}",
-							Path.Combine(gradleProjectPath, "build\\outputs\\apk\\debug", productName + "-debug.apk").Replace("/", "\\"));
+							Path.Combine(Path.Combine(gradleProjectPath, "build\\outputs\\apk\\debug"), productName + "-debug.apk").Replace("/", "\\"));
 						if (!apkOutputSuccessful.HasValue)
 						{
 							apkOutputSuccessful = true;
@@ -399,7 +399,7 @@ partial class OculusBuildApp : EditorWindow
 		{
 			var ps = System.Text.RegularExpressions.Regex.Escape("" + Path.DirectorySeparatorChar);
 			// ignore files .gradle/** build/** foo/.gradle/** and bar/build/**   
-			var ignorePattern = $"^([^{ps}]+{ps})?(\\.gradle|build){ps}";
+			var ignorePattern = string.Format("^([^{0}]+{0})?(\\.gradle|build){0}", ps);
 
 			var syncer = new DirectorySyncer(gradleTempExport,
 				gradleExport, ignorePattern);
@@ -563,8 +563,8 @@ partial class OculusBuildApp : EditorWindow
 
 	private static void SetupDirectories()
 	{
-		gradleTempExport = Path.Combine(Application.dataPath, "../Temp", "OVRGradleTempExport");
-		gradleExport = Path.Combine(Application.dataPath, "../Temp", "OVRGradleExport");
+		gradleTempExport = Path.Combine(Path.Combine(Application.dataPath, "../Temp"), "OVRGradleTempExport");
+		gradleExport = Path.Combine(Path.Combine(Application.dataPath, "../Temp"), "OVRGradleExport");
 		if (!Directory.Exists(gradleExport))
 		{
 			Directory.CreateDirectory(gradleExport);

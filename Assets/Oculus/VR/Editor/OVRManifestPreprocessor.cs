@@ -71,6 +71,18 @@ public class OVRManifestPreprocessor
 			Debug.LogWarning("Manifest error: unable to locate headset DoF mode");
 		}
 
+#if !UNITY_2018_2_OR_NEWER
+		int iconLabelText = manifestText.IndexOf("android:icon=\"@mipmap/app_icon\"");
+		if(iconLabelText != -1)
+		{
+			manifestText = manifestText.Replace("android:icon=\"@mipmap/app_icon\"", "android:icon=\"@drawable/app_icon\"");
+		}
+		else
+		{
+			Debug.LogWarning("Manifest error: failed to update icon label for older version of Unity");
+		}
+#endif
+
 		System.IO.File.WriteAllText(dstFile, manifestText);
 		AssetDatabase.Refresh();
 	}

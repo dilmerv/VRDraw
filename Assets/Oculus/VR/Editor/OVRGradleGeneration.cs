@@ -23,21 +23,25 @@ limitations under the License.
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Xml;
 using System.Diagnostics;
 using System.Threading;
+using UnityEditor;
 #if UNITY_ANDROID
 using UnityEditor.Android;
 #endif
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEditor.Build;
 #if UNITY_2018_1_OR_NEWER
 using UnityEditor.Build.Reporting;
 #endif
 using System;
 
-
+[InitializeOnLoad]
+public class OVRGradleGeneration
 #if UNITY_2018_1_OR_NEWER
-public class OVRGradleGeneration : IPreprocessBuildWithReport, IPostprocessBuildWithReport
+	: IPreprocessBuildWithReport, IPostprocessBuildWithReport
 #if UNITY_ANDROID
 	, IPostGenerateGradleAndroidProject
 #endif
@@ -49,8 +53,54 @@ public class OVRGradleGeneration : IPreprocessBuildWithReport, IPostprocessBuild
 	static private System.DateTime buildStartTime;
 	static private System.Guid buildGuid;
 
+#if UNITY_ANDROID
+	private const string prefName = "OVRAutoIncrementVersionCode_Enabled";
+	private const string menuItemAutoIncVersion = "Oculus/Tools/Auto Increment Version Code";
+	static bool autoIncrementVersion = false;
+#endif
+
+	static OVRGradleGeneration()
+	{
+		EditorApplication.delayCall += OnDelayCall;
+	}
+
+	static void OnDelayCall()
+	{
+#if UNITY_ANDROID
+		autoIncrementVersion = PlayerPrefs.GetInt(prefName, 0) != 0;
+		Menu.SetChecked(menuItemAutoIncVersion, autoIncrementVersion);
+#endif
+	}
+
+#if UNITY_ANDROID
+	[MenuItem(menuItemAutoIncVersion)]
+	static void ToggleUtilities()
+	{
+		autoIncrementVersion = !autoIncrementVersion;
+		Menu.SetChecked(menuItemAutoIncVersion, autoIncrementVersion);
+
+		int newValue = (autoIncrementVersion) ? 1 : 0;
+		PlayerPrefs.SetInt(prefName, newValue);
+		PlayerPrefs.Save();
+
+		UnityEngine.Debug.Log("Auto Increment Version Code: " + autoIncrementVersion);
+	}
+#endif
+
 	public void OnPreprocessBuild(BuildReport report)
 	{
+#if UNITY_ANDROID
+		// Generate error when Vulkan is selected as the perferred graphics API, which is not currently supported in Unity XR
+		if (!PlayerSettings.GetUseDefaultGraphicsAPIs(BuildTarget.Android))
+		{
+			GraphicsDeviceType[] apis = PlayerSettings.GetGraphicsAPIs(BuildTarget.Android);
+			if (apis.Length >= 1 && apis[0] == GraphicsDeviceType.Vulkan)
+			{
+				throw new BuildFailedException("XR is currently not supported when using the Vulkan Graphics API. Please go to PlayerSettings and remove 'Vulkan' from the list of Graphics APIs.");
+			}
+		}
+#endif
+
 		buildStartTime = System.DateTime.Now;
 		buildGuid = System.Guid.NewGuid();
 
@@ -62,7 +112,9 @@ public class OVRGradleGeneration : IPreprocessBuildWithReport, IPostprocessBuild
 
 		OVRPlugin.AddCustomMetadata("build_guid", buildGuid.ToString());
 		OVRPlugin.AddCustomMetadata("target_platform", report.summary.platform.ToString());
+#if !UNITY_2019_3_OR_NEWER
 		OVRPlugin.AddCustomMetadata("scripting_runtime_version", UnityEditor.PlayerSettings.scriptingRuntimeVersion.ToString());
+#endif
 		if (report.summary.platform == UnityEditor.BuildTarget.StandaloneWindows
 			|| report.summary.platform == UnityEditor.BuildTarget.StandaloneWindows64)
 		{
@@ -79,7 +131,7 @@ public class OVRGradleGeneration : IPreprocessBuildWithReport, IPostprocessBuild
 	public void OnPostGenerateGradleAndroidProject(string path)
 	{
 		UnityEngine.Debug.Log("OVRGradleGeneration triggered.");
-#if UNITY_ANDROID
+
 		var targetOculusPlatform = new List<string>();
 		if (OVRDeviceSelector.isTargetDeviceGearVrOrGo)
 		{
@@ -119,12 +171,150 @@ public class OVRGradleGeneration : IPreprocessBuildWithReport, IPostprocessBuild
 				UnityEngine.Debug.LogWarning("Unable to locate build.gradle");
 			}
 		}
-#endif
+
+		PatchAndroidManifest(path);
+	}
+
+	public void PatchAndroidManifest(string path)
+	{
+		string manifestFolder = Path.Combine(path, "src/main");
+		try
+		{
+			// Load android manfiest file
+			XmlDocument doc = new XmlDocument();
+			doc.Load(manifestFolder + "/AndroidManifest.xml");
+
+			string androidNamepsaceURI;
+			XmlElement element = (XmlElement)doc.SelectSingleNode("/manifest");
+			if (element == null)
+			{
+				UnityEngine.Debug.LogError("Could not find manifest tag in android manifest.");
+				return;
+			}
+
+			// Get android namespace URI from the manifest
+			androidNamepsaceURI = element.GetAttribute("xmlns:android");
+			if (!string.IsNullOrEmpty(androidNamepsaceURI))
+			{
+				// Look for intent filter category and change LAUNCHER to INFO
+				XmlNodeList nodeList = doc.SelectNodes("/manifest/application/activity/intent-filter/category");
+				foreach (XmlElement e in nodeList)
+				{
+					string attr = e.GetAttribute("name", androidNamepsaceURI);
+					if (attr == "android.intent.category.LAUNCHER")
+					{
+						e.SetAttribute("name", androidNamepsaceURI, "android.intent.category.INFO");
+					}
+				}
+
+				//If Quest is the target device, add the headtracking manifest tag
+				if (OVRDeviceSelector.isTargetDeviceQuest)
+				{
+					XmlNodeList manifestUsesFeatureNodes = doc.SelectNodes("/manifest/uses-feature");
+					bool foundHeadtrackingTag = false;
+					foreach (XmlElement e in manifestUsesFeatureNodes)
+					{
+						string attr = e.GetAttribute("name", androidNamepsaceURI);
+						if (attr == "android.hardware.vr.headtracking")
+							foundHeadtrackingTag = true;
+					}
+					//If the tag already exists, don't patch with a new one. If it doesn't, we add it.
+					if (!foundHeadtrackingTag)
+					{
+						XmlNode manifestElement = doc.SelectSingleNode("/manifest");
+						XmlElement headtrackingTag = doc.CreateElement("uses-feature");
+						headtrackingTag.SetAttribute("name", androidNamepsaceURI, "android.hardware.vr.headtracking");
+						headtrackingTag.SetAttribute("version", androidNamepsaceURI, "1");
+						string tagRequired = OVRDeviceSelector.isTargetDeviceGearVrOrGo ? "false" : "true";
+						headtrackingTag.SetAttribute("required", androidNamepsaceURI, tagRequired);
+						manifestElement.AppendChild(headtrackingTag);
+					}
+				}
+
+				XmlElement applicationNode = (XmlElement)doc.SelectSingleNode("/manifest/application");
+				if(applicationNode != null)
+				{
+					// If android label and icon are missing from the xml, add them
+					if (applicationNode.GetAttribute("android:label") == null)
+					{
+						applicationNode.SetAttribute("label", androidNamepsaceURI, "@string/app_name");
+					}
+					if (applicationNode.GetAttribute("android:icon") == null)
+					{
+						applicationNode.SetAttribute("icon", androidNamepsaceURI, "@mipmap/app_icon");
+					}
+
+					// Check for VR tag, if missing, append it
+					bool vrTagFound = false;
+					XmlNodeList appNodeList = applicationNode.ChildNodes;
+					foreach (XmlElement e in appNodeList)
+					{
+						if (e.GetAttribute("android:name") == "com.samsung.android.vr.application.mode")
+						{
+							vrTagFound = true;
+							break;
+						}
+					}
+
+					if (!vrTagFound)
+					{
+						XmlElement vrTag = doc.CreateElement("meta-data");
+						vrTag.SetAttribute("name", androidNamepsaceURI, "com.samsung.android.vr.application.mode");
+						vrTag.SetAttribute("value", androidNamepsaceURI, "vr_only");
+						applicationNode.AppendChild(vrTag); ;
+					}
+
+					// Disable allowBackup in manifest and add Android NSC XML file
+					OVRProjectConfig projectConfig = OVRProjectConfig.GetProjectConfig();
+					if (projectConfig != null)
+					{
+						if (projectConfig.disableBackups)
+						{
+							applicationNode.SetAttribute("allowBackup", androidNamepsaceURI, "false");
+						}
+
+						if (projectConfig.enableNSCConfig)
+						{
+							applicationNode.SetAttribute("networkSecurityConfig", androidNamepsaceURI, "@xml/network_sec_config");
+
+							string securityConfigFile = Path.Combine(Application.dataPath, "Oculus/VR/Editor/network_sec_config.xml");
+							string xmlDirectory = Path.Combine(path, "src/main/res/xml");
+							try
+							{
+								if (!Directory.Exists(xmlDirectory))
+								{
+									Directory.CreateDirectory(xmlDirectory);
+								}
+								File.Copy(securityConfigFile, Path.Combine(xmlDirectory, "network_sec_config.xml"), true);
+							}
+							catch (Exception e)
+							{
+								UnityEngine.Debug.LogError(e.Message);
+							}
+						}
+					}
+				}
+				doc.Save(manifestFolder + "/AndroidManifest.xml");
+			}
+		}
+		catch (Exception e)
+		{
+			UnityEngine.Debug.LogError(e.Message);
+		}
 	}
 
 	public void OnPostprocessBuild(BuildReport report)
 	{
 #if UNITY_ANDROID
+		if(autoIncrementVersion)
+		{
+			if((report.summary.options & BuildOptions.Development) == 0)
+			{
+				PlayerSettings.Android.bundleVersionCode++;
+				UnityEngine.Debug.Log("Incrementing version code to " + PlayerSettings.Android.bundleVersionCode);
+			}
+		}
+
 		bool isExporting = true;
 		foreach (var step in report.steps)
 		{
@@ -158,10 +348,10 @@ public class OVRGradleGeneration : IPreprocessBuildWithReport, IPostprocessBuild
 		if (!report.summary.outputPath.Contains("OVRGradleTempExport"))
 		{
 			OVRPlugin.SendEvent("build_complete", (System.DateTime.Now - buildStartTime).TotalSeconds.ToString(), "ovrbuild");
-		}
 #if BUILDSESSION
-		UnityEngine.Debug.LogFormat("build_complete: {0}", (System.DateTime.Now - buildStartTime).TotalSeconds.ToString());
+			UnityEngine.Debug.LogFormat("build_complete: {0}", (System.DateTime.Now - buildStartTime).TotalSeconds.ToString());
 #endif
+		}
 
 #if UNITY_ANDROID
 		if (!isExporting)
@@ -229,7 +419,7 @@ public class OVRGradleGeneration : IPreprocessBuildWithReport, IPostprocessBuild
 			DataReceivedEventHandler outputRecieved = new DataReceivedEventHandler(
 				(s, e) =>
 				{
-					if (e.Data.Length != 0 && !e.Data.Contains("\u001b"))
+					if (e.Data != null && e.Data.Length != 0 && !e.Data.Contains("\u001b"))
 					{
 						if (e.Data.Contains("free_cache"))
 						{
@@ -288,5 +478,7 @@ public class OVRGradleGeneration : IPreprocessBuildWithReport, IPostprocessBuild
 		}
 	}
 #endif
-}
+#else
+{
 #endif
+}

@@ -27,6 +27,25 @@ public class MoviePlayerSample : MonoBehaviour
     private Material externalTex2DMaterial;
 
     public string MovieName;
+    public string DrmLicenseUrl;
+    public bool LoopVideo;
+    public VideoShape Shape;
+    public VideoStereo Stereo;
+
+
+    public enum VideoShape
+    {
+        _360,
+        _180,
+        Quad
+    }
+
+    public enum VideoStereo
+    {
+        Mono,
+        TopBottom,
+        LeftRight
+    }
 
     /// <summary>
     /// Initialization of the movie surface
@@ -40,29 +59,65 @@ public class MoviePlayerSample : MonoBehaviour
         videoPlayer = GetComponent<UnityEngine.Video.VideoPlayer>();
         if (videoPlayer == null)
             videoPlayer = gameObject.AddComponent<UnityEngine.Video.VideoPlayer>();
+        videoPlayer.isLooping = LoopVideo;
 
         overlay = GetComponent<OVROverlay>();
         if (overlay == null)
             overlay = gameObject.AddComponent<OVROverlay>();
 
-        // set shape to Equirect
-        overlay.currentOverlayShape = OVROverlay.OverlayShape.Equirect;
+        Rect destRect = new Rect(0, 0, 1, 1);
+        switch (Shape)
+        {
+            case VideoShape._360:
+                // set shape to Equirect
+                overlay.currentOverlayShape = OVROverlay.OverlayShape.Equirect;
+                break;
+            case VideoShape._180:
+                overlay.currentOverlayShape = OVROverlay.OverlayShape.Equirect;
+                destRect = new Rect(0.25f, 0, 0.5f, 1.0f);
+                break;
+            case VideoShape.Quad:
+            default:
+                overlay.currentOverlayShape = OVROverlay.OverlayShape.Quad;
+                break;
+        }
 
-        // set source and dest matrices for 180 video
         overlay.overrideTextureRectMatrix = true;
-        overlay.SetSrcDestRects(new Rect(0, 0, 0.5f, 1.0f), new Rect(0.5f, 0, 0.5f, 1.0f), new Rect(0.25f, 0, 0.5f, 1.0f), new Rect(0.25f, 0, 0.5f, 1.0f));
+
+        Rect sourceLeft = new Rect(0, 0, 1, 1);
+        Rect sourceRight = new Rect(0, 0, 1, 1);
+        switch (Stereo)
+        {
+            case VideoStereo.LeftRight:
+                // set source matrices for left/right
+                sourceLeft = new Rect(0, 0, 0.5f, 1.0f);
+                sourceRight = new Rect(0.5f, 0, 0.5f, 1.0f);
+                break;
+            case VideoStereo.TopBottom:
+                // set source matrices for top/bottom
+                sourceLeft = new Rect(0, 0, 1.0f, 0.5f);
+                sourceRight = new Rect(0, 0.5f, 1.0f, 0.5f);
+                break;
+        }
+        overlay.SetSrcDestRects(sourceLeft, sourceRight, destRect, destRect);
 
         // disable it to reset it.
         overlay.enabled = false;
         // only can use external surface with native plugin
         overlay.isExternalSurface = NativeVideoPlayer.IsAvailable;
         // only mobile has Equirect shape
-        overlay.enabled = Application.platform == RuntimePlatform.Android;
+        overlay.enabled = (overlay.currentOverlayShape != OVROverlay.OverlayShape.Equirect || Application.platform == RuntimePlatform.Android);
 
 #if UNITY_EDITOR
         overlay.currentOverlayShape = OVROverlay.OverlayShape.Quad;
         overlay.enabled = true;
 #endif
+    }
+
+    private bool IsLocalVideo(string movieName)
+    {
+        // if the path contains any url scheme, it is not local
+        return !movieName.Contains("://");
     }
 
     private System.Collections.IEnumerator Start()
@@ -79,22 +134,29 @@ public class MoviePlayerSample : MonoBehaviour
 
         if (!string.IsNullOrEmpty(MovieName))
         {
-#if UNITY_EDITOR
-            // in editor, just pull in the movie file from wherever it lives (to test without putting in streaming assets)
-            var guids = UnityEditor.AssetDatabase.FindAssets(Path.GetFileNameWithoutExtension(MovieName));
-
-            if (guids.Length > 0)
+            if (IsLocalVideo(MovieName))
             {
-                string video = UnityEditor.AssetDatabase.GUIDToAssetPath(guids[0]);
-                Play(video);
-            }
+#if UNITY_EDITOR
+                // in editor, just pull in the movie file from wherever it lives (to test without putting in streaming assets)
+                var guids = UnityEditor.AssetDatabase.FindAssets(Path.GetFileNameWithoutExtension(MovieName));
+
+                if (guids.Length > 0)
+                {
+                    string video = UnityEditor.AssetDatabase.GUIDToAssetPath(guids[0]);
+                    Play(video, null);
+                }
 #else
-            Play(Application.streamingAssetsPath +"/" + MovieName);
+                Play(Application.streamingAssetsPath +"/" + MovieName, null);
 #endif
+            }
+            else
+            {
+                Play(MovieName, DrmLicenseUrl);
+            }
         }
     }
 
-    public void Play(string moviePath)
+    public void Play(string moviePath, string drmLicencesUrl)
     {
         if (moviePath != string.Empty)
         {
@@ -104,7 +166,8 @@ public class MoviePlayerSample : MonoBehaviour
                 OVROverlay.ExternalSurfaceObjectCreated surfaceCreatedCallback = () =>
                 {
                     Debug.Log("Playing ExoPlayer with SurfaceObject");
-                    NativeVideoPlayer.PlayVideo(moviePath, overlay.externalSurfaceObject);
+                    NativeVideoPlayer.PlayVideo(moviePath, drmLicencesUrl, overlay.externalSurfaceObject);
+                    NativeVideoPlayer.SetLooping(LoopVideo);
                 };
 
                 if (overlay.externalSurfaceObject == IntPtr.Zero)

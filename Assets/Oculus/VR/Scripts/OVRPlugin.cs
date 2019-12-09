@@ -14,6 +14,10 @@ ANY KIND, either express or implied. See the License for the specific language g
 permissions and limitations under the License.
 ************************************************************************************/
 
+#if USING_XR_MANAGEMENT && USING_XR_SDK_OCULUS
+#define USING_XR_SDK
+#endif
+
 #if !(UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN || (UNITY_ANDROID && !UNITY_EDITOR))
 #define OVRPLUGIN_UNSUPPORTED_PLATFORM
 #endif
@@ -39,7 +43,7 @@ public static class OVRPlugin
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
 	public static readonly System.Version wrapperVersion = _versionZero;
 #else
-	public static readonly System.Version wrapperVersion = OVRP_1_38_0.version;
+	public static readonly System.Version wrapperVersion = OVRP_1_43_0.version;
 #endif
 
 #if !OVRPLUGIN_UNSUPPORTED_PLATFORM
@@ -421,6 +425,8 @@ public static class OVRPlugin
 		ShapeFlag_Cubemap = unchecked((int)OverlayShape.Cubemap << OverlayShapeFlagShift),
 		ShapeFlag_OffcenterCubemap = unchecked((int)OverlayShape.OffcenterCubemap << OverlayShapeFlagShift),
 		ShapeFlagRangeMask = unchecked((int)0xF << OverlayShapeFlagShift),
+
+		Hidden = unchecked((int)0x000000200),
 	}
 
 	[StructLayout(LayoutKind.Sequential)]
@@ -1510,7 +1516,7 @@ public static class OVRPlugin
 
 	public static bool EnqueueSubmitLayer(bool onTop, bool headLocked, bool noDepthBufferTesting, IntPtr leftTexture, IntPtr rightTexture, int layerId, int frameIndex, Posef pose, Vector3f scale, int layerIndex = 0, OverlayShape shape = OverlayShape.Quad,
 										bool overrideTextureRectMatrix = false, TextureRectMatrixf textureRectMatrix = default(TextureRectMatrixf), bool overridePerLayerColorScaleAndOffset = false, Vector4 colorScale = default(Vector4), Vector4 colorOffset = default(Vector4),
-										bool expensiveSuperSample = false)
+										bool expensiveSuperSample = false, bool hidden = false)
 	{
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
 		return false;
@@ -1529,6 +1535,8 @@ public static class OVRPlugin
 				flags |= (uint)OverlayFlag.NoDepth;
 			if (expensiveSuperSample)
 				flags |= (uint)OverlayFlag.ExpensiveSuperSample;
+			if (hidden)
+				flags |= (uint)OverlayFlag.Hidden;
 
 			if (shape == OverlayShape.Cylinder || shape == OverlayShape.Cubemap)
 			{
@@ -3457,6 +3465,11 @@ public static class OVRPlugin
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
 		return false;
 #else
+#if USING_XR_SDK
+		OculusXRPlugin.SetColorScale(colorScale.x, colorScale.y, colorScale.z, colorScale.w);
+		OculusXRPlugin.SetColorOffset(colorOffset.x, colorOffset.y, colorOffset.z, colorOffset.w);
+		return true;
+#else
 		if (version >= OVRP_1_31_0.version)
 		{
 			Bool ovrpApplyToAllLayers = applyToAllLayers ? Bool.True : Bool.False;
@@ -3466,6 +3479,7 @@ public static class OVRPlugin
 		{
 			return false;
 		}
+#endif
 #endif
 	}
 
@@ -3839,7 +3853,7 @@ public static class OVRPlugin
 #endif
 		}
 
-		public static bool EncodeMrcFrame(System.IntPtr textureHandle, float[] audioData, int audioChannels, double timestamp, ref int outSyncId)
+		public static bool EncodeMrcFrame(System.IntPtr textureHandle, float[] audioData, int audioFrames, int audioChannels, double timestamp, ref int outSyncId)
 		{
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
 			return false;
@@ -3864,7 +3878,7 @@ public static class OVRPlugin
 				{
 					pinnedAudioData = GCHandle.Alloc(audioData, GCHandleType.Pinned);
 					audioDataPtr = pinnedAudioData.AddrOfPinnedObject();
-					audioDataLen = audioData.Length * 4;
+					audioDataLen = audioFrames * 4;
 				}
 				Result result = OVRP_1_38_0.ovrp_Media_EncodeMrcFrame(textureHandle, audioDataPtr, audioDataLen, audioChannels, timestamp, ref outSyncId);
 				if (audioData != null)
@@ -3883,7 +3897,7 @@ public static class OVRPlugin
 #if !OVRPLUGIN_UNSUPPORTED_PLATFORM
 		static Texture2D cachedTexture = null;
 #endif
-		public static bool EncodeMrcFrame(RenderTexture frame, float[] audioData, int audioChannels, double timestamp, ref int outSyncId)
+		public static bool EncodeMrcFrame(RenderTexture frame, float[] audioData, int audioFrames, int audioChannels, double timestamp, ref int outSyncId)
 		{
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
 			return false;
@@ -3923,7 +3937,7 @@ public static class OVRPlugin
 				{
 					pinnedAudioData = GCHandle.Alloc(audioData, GCHandleType.Pinned);
 					audioDataPtr = pinnedAudioData.AddrOfPinnedObject();
-					audioDataLen = audioData.Length * 4;
+					audioDataLen = audioFrames * 4;
 				}
 				Result result = OVRP_1_38_0.ovrp_Media_EncodeMrcFrame(pointer, audioDataPtr, audioDataLen, audioChannels, timestamp, ref outSyncId);
 
@@ -3971,6 +3985,27 @@ public static class OVRPlugin
 		else
 		{
 			return false;
+		}
+#endif
+	}
+
+	public static float GetAdaptiveGPUPerformanceScale()
+	{
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+		return 1.0f;
+#else
+		if (version >= OVRP_1_42_0.version)
+		{
+			float adaptiveScale = 1.0f;
+			if (OVRP_1_42_0.ovrp_GetAdaptiveGpuPerformanceScale2(ref adaptiveScale) == Result.Success)
+			{
+				return adaptiveScale;
+			}
+			return 1.0f;
+		}
+		else
+		{
+			return 1.0f;
 		}
 #endif
 	}
@@ -4719,6 +4754,37 @@ public static class OVRPlugin
 
 		[DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
 		public static extern Result ovrp_GetNodePositionValid(Node nodeId, ref Bool nodePositionValid);
+	}
+
+	private static class OVRP_1_39_0
+	{
+		public static readonly System.Version version = new System.Version(1, 39, 0);
+	}
+
+	private static class OVRP_1_40_0
+	{
+		public static readonly System.Version version = new System.Version(1, 40, 0);
+	}
+
+	private static class OVRP_1_41_0
+	{
+		public static readonly System.Version version = new System.Version(1, 41, 0);
+	}
+
+	private static class OVRP_1_42_0
+	{
+		public static readonly System.Version version = new System.Version(1, 42, 0);
+
+		[DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+		public static extern Result ovrp_GetAdaptiveGpuPerformanceScale2(ref float adaptiveGpuPerformanceScale);
+	}
+
+	private static class OVRP_1_43_0
+	{
+		public static readonly System.Version version = new System.Version(1, 43, 0);
+
+		[DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+		public static extern Result ovrp_GetAdaptiveGpuPerformanceScale2(ref float adaptiveGpuPerformanceScale);
 	}
 
 #endif // !OVRPLUGIN_UNSUPPORTED_PLATFORM

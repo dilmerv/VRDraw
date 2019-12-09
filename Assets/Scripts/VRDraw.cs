@@ -1,5 +1,4 @@
 ﻿using UnityEngine;
-using SplineMesh;
 using System.Collections.Generic;
 using DilmerGames.Enums;
 using DilmerGames.Core.Utilities;
@@ -10,15 +9,6 @@ namespace DilmerGames
     {   
         [SerializeField]
         private ControlHand controlHand = ControlHand.NoSet;
-
-        [SerializeField]
-        private bool useSpline = false;
-
-        [SerializeField]
-        private Spline spline;
-
-        [SerializeField]
-        private SplineSmoother splineSmoother;
 
         [SerializeField]
         private GameObject objectToTrackMovement;
@@ -53,21 +43,9 @@ namespace DilmerGames
         [SerializeField]
         private VRControllerOptions vrControllerOptions;
         
-        public VRControllerOptions VRControllerOptions
-        {
-            get {
-                return vrControllerOptions;
-            }
-        }
+        public VRControllerOptions VRControllerOptions => vrControllerOptions;
         
-        void Awake() 
-        {
-            if(useSpline)
-            {
-                spline.gameObject.SetActive(true);
-            } 
-            AddNewLineRenderer();
-        }
+        void Awake() => AddNewLineRenderer();
 
         void AddNewLineRenderer()
         {
@@ -167,22 +145,13 @@ namespace DilmerGames
 
         void AddPoint(Vector3 position, Vector3 direction)
         {
-            if(useSpline)
-            {
-                SplineNode splineNode = new SplineNode(objectToTrackMovement.transform.localPosition, direction);
-                spline.AddNode(splineNode);
-                splineSmoother.SmoothAll();
-            }
-            else 
-            {
-                currentLineRender.SetPosition(positionCount, position);
-                positionCount++;
-                currentLineRender.positionCount = positionCount + 1;
-                currentLineRender.SetPosition(positionCount, position);
-                
-                // send position
-                TCPControllerClient.Instance.UpdateLine(position);
-            }
+            currentLineRender.SetPosition(positionCount, position);
+            positionCount++;
+            currentLineRender.positionCount = positionCount + 1;
+            currentLineRender.SetPosition(positionCount, position);
+            
+            // send position
+            TCPControllerClient.Instance.UpdateLine(position);
         }
 
         public void UpdateLineWidth(float newValue)

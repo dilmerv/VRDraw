@@ -69,8 +69,6 @@ namespace OculusSampleFramework
         [SerializeField]
         int m_obstructionLayer;
 
-        [SerializeField]
-        GameObject m_player;
         DistanceGrabber m_otherHand;
 
         protected DistanceGrabbable m_target;
@@ -152,6 +150,7 @@ namespace OculusSampleFramework
 
                 m_grabbedObj = closestGrabbable;
                 m_grabbedObj.GrabBegin(this, closestGrabbableCollider);
+                SetPlayerIgnoreCollision(m_grabbedObj.gameObject, true);
 
                 m_movingObjectToHand = true;
                 m_lastPos = transform.position;

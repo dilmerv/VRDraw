@@ -1,34 +1,30 @@
 fileFormatVersion: 2
-guid: fe7ed02a4d2df5143a972d37d7af94b4
-timeCreated: 1555100492
-licenseType: Store
+guid: ce5b0dbb1d5e0f9448bf98c46ed0f0d1
 PluginImporter:
+  externalObjects: {}
   serializedVersion: 2
   iconMap: {}
   executionOrder: {}
   isPreloaded: 0
   isOverridable: 0
   platformData:
-    data:
-      first:
-        '': data
-      second:
-        enabled: 0
-        settings: {}
-    data:
-      first:
-        Android: Android
-      second:
-        enabled: 1
-        settings:
-          CPU: ARM64
-    data:
-      first:
-        Editor: Editor
-      second:
-        enabled: 0
-        settings:
-          DefaultValueInitialized: true
+  - first:
+      Android: Android
+    second:
+      enabled: 1
+      settings:
+        CPU: ARM64
+  - first:
+      Any: 
+    second:
+      enabled: 0
+      settings: {}
+  - first:
+      Editor: Editor
+    second:
+      enabled: 0
+      settings:
+        DefaultValueInitialized: true
   userData: 
   assetBundleName: 
   assetBundleVariant: 

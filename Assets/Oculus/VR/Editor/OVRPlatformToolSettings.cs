@@ -35,21 +35,6 @@ namespace Assets.Oculus.VR.Editor
 			}
 		}
 
-		public static string AppToken
-		{
-			get
-			{
-				return Instance.targetPlatform < OVRPlatformTool.TargetPlatform.None ? Instance.appTokens[(int)Instance.targetPlatform] : "";
-			}
-			set
-			{
-				if (Instance.targetPlatform < OVRPlatformTool.TargetPlatform.None)
-				{
-					Instance.appTokens[(int)Instance.targetPlatform] = value;
-				}
-			}
-		}
-
 		public static string ReleaseNote
 		{
 			get
@@ -206,11 +191,14 @@ namespace Assets.Oculus.VR.Editor
 			set { Instance.targetPlatform = value; }
 		}
 
-		[SerializeField]
-		private string[] appIDs = new string[(int)OVRPlatformTool.TargetPlatform.None];
+		public static bool RunOvrLint
+		{
+			get { return Instance.runOvrLint; }
+			set { Instance.runOvrLint = value; }
+		}
 
 		[SerializeField]
-		private string[] appTokens = new string[(int)OVRPlatformTool.TargetPlatform.None];
+		private string[] appIDs = new string[(int)OVRPlatformTool.TargetPlatform.None];
 
 		[SerializeField]
 		private string[] releaseNotes = new string[(int)OVRPlatformTool.TargetPlatform.None];
@@ -262,6 +250,9 @@ namespace Assets.Oculus.VR.Editor
 
 		[SerializeField]
 		private OVRPlatformTool.TargetPlatform targetPlatform = OVRPlatformTool.TargetPlatform.None;
+
+		[SerializeField]
+		private bool runOvrLint = true;
 
 		private static OVRPlatformToolSettings instance;
 		public static OVRPlatformToolSettings Instance

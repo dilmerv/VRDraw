@@ -15,7 +15,7 @@ public static class NativeVideoPlayer {
             {
                 try 
                 {
-                    System.IntPtr myVideoPlayerClass = AndroidJNI.FindClass("com/oculus/videoplayer/MyVideoPlayer");
+                    System.IntPtr myVideoPlayerClass = AndroidJNI.FindClass("com/oculus/videoplayer/NativeVideoPlayer");
 
                     if (myVideoPlayerClass != System.IntPtr.Zero)
                     {
@@ -25,13 +25,13 @@ public static class NativeVideoPlayer {
                     }
                     else
                     {
-                        Debug.LogError("Failed to find MyVideoPlayer class");
+                        Debug.LogError("Failed to find NativeVideoPlayer class");
                         _VideoPlayerClass = System.IntPtr.Zero;
                     }
                 }
                 catch(System.Exception ex)
                 {
-                    Debug.LogError("Failed to find MyVideoPlayer class");
+                    Debug.LogError("Failed to find NativeVideoPlayer class");
                     Debug.LogException(ex);
                     _VideoPlayerClass = System.IntPtr.Zero;
                 }
@@ -72,6 +72,7 @@ public static class NativeVideoPlayer {
     private static System.IntPtr resumeMethodId;
     private static System.IntPtr pauseMethodId;
     private static System.IntPtr setPlaybackSpeedMethodId;
+    private static System.IntPtr setLoopingMethodId;
 
     public static bool IsAvailable
     {
@@ -85,18 +86,20 @@ public static class NativeVideoPlayer {
         }
     }
 
-    public static void PlayVideo(string path, System.IntPtr surfaceObj)
+    public static void PlayVideo(string path, string drmLicenseUrl, System.IntPtr surfaceObj)
     {
         if (playVideoMethodId == System.IntPtr.Zero)
         {
-            playVideoMethodId = AndroidJNI.GetStaticMethodID(VideoPlayerClass, "playVideo", "(Landroid/content/Context;Ljava/lang/String;Landroid/view/Surface;)V");
+            playVideoMethodId = AndroidJNI.GetStaticMethodID(VideoPlayerClass, "playVideo", "(Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;Landroid/view/Surface;)V");
         }
 
         System.IntPtr filePathJString = AndroidJNI.NewStringUTF(path);
+        System.IntPtr drmLicenseUrlJString = AndroidJNI.NewStringUTF(drmLicenseUrl);
 
-        AndroidJNI.CallStaticVoidMethod(VideoPlayerClass, playVideoMethodId, new jvalue[] { new jvalue { l = Activity }, new jvalue { l = filePathJString }, new jvalue { l = surfaceObj } });
+        AndroidJNI.CallStaticVoidMethod(VideoPlayerClass, playVideoMethodId, new jvalue[] { new jvalue { l = Activity }, new jvalue { l = filePathJString }, new jvalue { l = drmLicenseUrlJString }, new jvalue { l = surfaceObj } });
 
         AndroidJNI.DeleteLocalRef(filePathJString);
+        AndroidJNI.DeleteLocalRef(drmLicenseUrlJString);
     }
 
     public static void Stop()
@@ -137,5 +140,14 @@ public static class NativeVideoPlayer {
         }
 
         AndroidJNI.CallStaticVoidMethod(VideoPlayerClass, setPlaybackSpeedMethodId, new jvalue[] { new jvalue { f = speed } });
+    }
+    public static void SetLooping(bool looping)
+    {
+        if (setLoopingMethodId == System.IntPtr.Zero)
+        {
+            setLoopingMethodId = AndroidJNI.GetStaticMethodID(VideoPlayerClass, "setLooping", "(Z)V");
+        }
+
+        AndroidJNI.CallStaticVoidMethod(VideoPlayerClass, setLoopingMethodId, new jvalue[] { new jvalue { z = looping } });
     }
 }
