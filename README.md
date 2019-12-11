@@ -22,7 +22,7 @@ It always takes time to run and test in the Oculus device so instead I provide y
 
 1- Enable AllowEditorControls by searching for VRDrawLeft and VRDrawRight game objects in the hierarchy and updating the property in the VRDraw.cs inspector. 
 
-<img src="https://github.com/dilmerv/VRDraw/blob/master/docs/images/instructions_1.gif" width="300">
+<img src="https://github.com/dilmerv/VRDraw/blob/master/docs/images/instructions_1.png" width="300">
 
 2- Hit Play in the editor and use the following keyboard keys to move around, draw, and bring draw UI options:
 
