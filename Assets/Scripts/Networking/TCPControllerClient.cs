@@ -8,6 +8,9 @@ using UnityEngine;
 public class TCPControllerClient : Singleton<TCPControllerClient>
 {
     [SerializeField]
+    private bool enableTCPClient = false;
+
+    [SerializeField]
     private string serverIPAddress = "127.0.0.1";
 
     [SerializeField]
@@ -39,6 +42,11 @@ public class TCPControllerClient : Singleton<TCPControllerClient>
 
     void Awake()
     {
+        if(!enableTCPClient)
+        {
+            enabled = enableTCPClient;
+        }
+        
         // create singleton object before threads are created
         Dispatcher dispatcher = Dispatcher.Instance;
     }

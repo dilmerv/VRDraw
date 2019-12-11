@@ -52,12 +52,6 @@ namespace DilmerGames
 
         public VRControllerOption selectedOption;
 
-        [SerializeField]
-        private bool leftKey = false;
-
-        [SerializeField]
-        private bool rightKey = false;
-
         public bool IsScreenHidden
         {
             get 
@@ -114,7 +108,7 @@ namespace DilmerGames
             else if(controlHand == ControlHand.Right)
             {
                 // toggle screen control
-                if(OVRInput.GetDown(OVRInput.RawButton.A) || Input.GetKeyDown(KeyCode.A))
+                if(OVRInput.GetDown(OVRInput.RawButton.A) || Input.GetKeyDown(KeyCode.Z))
                     ToggleScreen();
 
                 // increment slider value
@@ -123,7 +117,6 @@ namespace DilmerGames
 
                 // decrement slider value
                 if((OVRInput.Get(OVRInput.Button.SecondaryThumbstickLeft) || Input.GetKey(KeyCode.LeftArrow)) && ShoudActivateSlider())
-                    
                     selectedOption.GetComponent<Slider>().value -= Time.deltaTime * lineWidthSliderMultiplier;
 
                 // focus option left direction

@@ -33,19 +33,32 @@ namespace DilmerGames
         [SerializeField]
         private Color defaultColor = Color.white;
 
+        [SerializeField]
+        private GameObject editorObjectToTrackMovement;
 
         [SerializeField]
-        private bool leftKey = false;
-
-        [SerializeField]
-        private bool rightKey = false;
+        private bool allowEditorControls = true;
 
         [SerializeField]
         private VRControllerOptions vrControllerOptions;
         
         public VRControllerOptions VRControllerOptions => vrControllerOptions;
         
-        void Awake() => AddNewLineRenderer();
+        void Awake() 
+        {
+            #if UNITY_EDITOR
+            
+            // if we allow editor controls use the editor object to track movement because oculus
+            // blocks the movement of LeftControllerAnchor and RightControllerAnchor
+            if(allowEditorControls)
+            {
+                objectToTrackMovement = editorObjectToTrackMovement != null ? editorObjectToTrackMovement : objectToTrackMovement;
+            }
+
+            #endif
+
+            AddNewLineRenderer();
+        }
 
         void AddNewLineRenderer()
         {
@@ -101,28 +114,29 @@ namespace DilmerGames
     #endif
 
     #if UNITY_EDITOR
+            if(!allowEditorControls) return;
 
-            // primary left key
-            if(controlHand == ControlHand.Left && leftKey)
+            // left controller
+            if(controlHand == ControlHand.Left && Input.GetKey(KeyCode.K))
             {
-                VRStats.Instance.firstText.text = $"LeftKey: {leftKey}";
+                VRStats.Instance.firstText.text = $"Input.GetKey(KeyCode.K) {Input.GetKey(KeyCode.K)}";
                 UpdateLine();
             }
-            else if(controlHand == ControlHand.Left && Input.GetKeyDown(KeyCode.LeftArrow))
+            else if(controlHand == ControlHand.Left && Input.GetKeyUp(KeyCode.K))
             {
-                VRStats.Instance.secondText.text = $"Input.GetKeyDown(KeyCode.LeftArrow) {Input.GetKeyDown(KeyCode.LeftArrow)}";
+                VRStats.Instance.secondText.text = $"Input.GetKeyUp(KeyCode.K) {Input.GetKeyUp(KeyCode.K)}";
                 AddNewLineRenderer();
             }
 
-            // secondary right key
-            if(controlHand == ControlHand.Right && rightKey)
+            // right controller
+            if(controlHand == ControlHand.Right && Input.GetKey(KeyCode.L))
             {
-                VRStats.Instance.firstText.text = $"RightKey: {rightKey}";
+                VRStats.Instance.firstText.text = $"Input.GetKey(KeyCode.L): {Input.GetKey(KeyCode.L)}";
                 UpdateLine();
             }
-            else if(controlHand == ControlHand.Right && Input.GetKeyDown(KeyCode.RightArrow))
+            else if(controlHand == ControlHand.Right && Input.GetKeyUp(KeyCode.L))
             {
-                VRStats.Instance.secondText.text = $"Input.GetKeyDown(KeyCode.RightArrow): {Input.GetKeyDown(KeyCode.RightArrow)}";
+                VRStats.Instance.secondText.text = $"Input.GetKeyUp(KeyCode.L): {Input.GetKeyUp(KeyCode.L)}";
                 AddNewLineRenderer();
             }
     #endif
