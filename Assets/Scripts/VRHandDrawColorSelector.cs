@@ -20,21 +20,7 @@ namespace DilmerGames
 
         private Material material;
         
-        private void Awake() 
-        {
-            material = GetComponent<Renderer>().material;  
-            Debug.Log("Color" + material.color.ToString() );
-            VRLogInfo.Instance.LogInfo("ovrHand.name: " + material.color.ToString()); 
-             
-        }
-
-        public string ColorName
-        {
-            get
-            {
-                return material?.color.ToString();
-            }
-        }
+        private void Awake() => material = GetComponent<Renderer>().material;
 
         private void OnTriggerEnter(Collider other) 
         {

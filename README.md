@@ -4,9 +4,22 @@ An open source project demonstrating how to draw in virtual reality. This projec
 
 As a way to give back please consider subscribing to my [YouTube channel](https://www.youtube.com/c/dilmervalecillos?sub_cofirmation=1) thank you !
 
-## VR Draw Main Scene
+## VR Draw Main Scene (With Hands)
 
-VRDrawing.unity is the main scene and few examples created while running with the Oculus Quest are shown below:
+***Important Be sure to select "Hands Only Or Controller And Hands" in the OVRCameraRig Hand Tracking Support***
+VRHandDrawing.unity is the main scene for hand drawing implementation and few examples created while running with the Oculus Quest are shown below:
+
+<img src="https://github.com/dilmerv/VRDraw/blob/master/docs/images/handdraw_1.gif" width="300">
+
+<img src="https://github.com/dilmerv/VRDraw/blob/master/docs/images/handdraw_2.gif" width="300">
+
+<img src="https://github.com/dilmerv/VRDraw/blob/master/docs/images/handdraw_3.gif" width="300">
+
+## VR Draw Main Scene (With Controller)
+
+***Important Be sure to select "Hands Only Or Controller And Hands" in the OVRCameraRig Hand Tracking Support***
+
+VRDrawing.unity is the main scene for controller drawing implementation and few examples created while running with the Oculus Quest are shown below:
 
 <img src="https://github.com/dilmerv/VRDraw/blob/master/docs/images/demo_1.gif" width="300">
 

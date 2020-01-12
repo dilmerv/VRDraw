@@ -140,11 +140,7 @@ namespace DilmerGames
             if (IsPinchingReleased)
             {
                 AddNewLineRenderer();
-                //VRLogInfo.Instance.LogInfo("Adding A line position: " + objectToTrackMovement.transform.position);
                 IsPinchingReleased = false;
-
-                //VRLogInfo.Instance.LogInfo("isIndexFingerPinching: " + isIndexFingerPinching);
-                //VRLogInfo.Instance.LogInfo("indexFingerPinchStrength: " + indexFingerPinchStrength);
             }
         }
 
