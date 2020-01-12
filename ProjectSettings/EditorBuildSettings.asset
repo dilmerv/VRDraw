@@ -5,7 +5,10 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/VRDrawing.unity
     guid: ce7b89d78c1ef4b74a3d01f6740c0000
+  - enabled: 1
+    path: Assets/Scenes/VRHandDrawing.unity
+    guid: 56a3c670a665c406992b4c95724550d3
   m_configObjects: {}
