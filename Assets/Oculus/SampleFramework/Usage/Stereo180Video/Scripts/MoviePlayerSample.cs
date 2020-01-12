@@ -243,6 +243,12 @@ public class MoviePlayerSample : MonoBehaviour
                 mediaRenderer.material.SetVector("_SrcRectLeft", overlay.srcRectLeft.ToVector());
                 mediaRenderer.material.SetVector("_SrcRectRight", overlay.srcRectRight.ToVector());
             }
+            isPlaying = videoPlayer.isPlaying;
+        }
+        else
+        {
+            NativeVideoPlayer.SetListenerRotation(Camera.main.transform.rotation);
+            isPlaying = NativeVideoPlayer.IsPlaying;
         }
 	}
 

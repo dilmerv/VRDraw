@@ -80,15 +80,16 @@ import com.google.android.exoplayer2.video.VideoRendererEventListener;
 import com.twobigears.audio360.AudioEngine;
 import com.twobigears.audio360.ChannelMap;
 import com.twobigears.audio360.SpatDecoderQueue;
+import com.twobigears.audio360.TBQuat;
 import com.twobigears.audio360exo2.Audio360Sink;
 import com.twobigears.audio360exo2.OpusRenderer;
-import com.unity3d.player.UnityPlayer;
 import java.io.File;
 import java.lang.reflect.Constructor;
 import java.net.CookieHandler;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -102,7 +103,9 @@ public class NativeVideoPlayer
     ;
     static AudioEngine engine;
     static SpatDecoderQueue spat;
-    static float SAMPLE_RATE = 48000.f;
+    static final float SAMPLE_RATE = 48000.f;    
+    static final int BUFFER_SIZE = 1024;
+    static final int QUEUE_SIZE_IN_SAMPLES = 40960;
 
     static SimpleExoPlayer exoPlayer;
     static AudioSink audio360Sink;
@@ -111,6 +114,8 @@ public class NativeVideoPlayer
     static FrameworkMediaDrm mediaDrm;
 
     static Handler handler;
+
+    static volatile boolean isPlaying;
 
     private static Handler getHandler()
     {
@@ -122,15 +127,39 @@ public class NativeVideoPlayer
         return handler;
     }
 
-
     private static class CustomRenderersFactory extends DefaultRenderersFactory {
+        private Context myContext;
+        private long myAllowedVideoJoiningTimeMs = 5000;
         public CustomRenderersFactory(Context context) {
             super(context);
+            this.myContext = context;
         }
 
         @Override
-        protected void buildAudioRenderers(Context context, /*@Nullable*/ DrmSessionManager<FrameworkMediaCrypto> drmSessionManager, AudioProcessor[] audioProcessors, Handler eventHandler, AudioRendererEventListener eventListener, int extensionRendererMode, ArrayList<Renderer> out) {
-            super.buildAudioRenderers(context, drmSessionManager, audioProcessors, eventHandler, eventListener, extensionRendererMode, out);
+        public DefaultRenderersFactory setAllowedVideoJoiningTimeMs(long allowedVideoJoiningTimeMs) {
+            super.setAllowedVideoJoiningTimeMs(allowedVideoJoiningTimeMs);
+            myAllowedVideoJoiningTimeMs = allowedVideoJoiningTimeMs;
+            return this;
+          }
+
+        @Override
+        public Renderer[] createRenderers(
+            Handler eventHandler,
+            VideoRendererEventListener videoRendererEventListener,
+            AudioRendererEventListener audioRendererEventListener,
+            TextOutput textRendererOutput,
+            MetadataOutput metadataRendererOutput,
+            /*@Nullable*/ DrmSessionManager<FrameworkMediaCrypto> drmSessionManager) {
+
+            Renderer[] renderers = super.createRenderers(
+                eventHandler, 
+                videoRendererEventListener, 
+                audioRendererEventListener,
+                textRendererOutput,
+                metadataRendererOutput,
+                drmSessionManager);
+
+            ArrayList<Renderer> rendererList = new ArrayList<Renderer>(Arrays.asList(renderers));
 
             // The output latency of the engine can be used to compensate for sync
             double latency = engine.getOutputLatencyMs();
@@ -140,7 +169,10 @@ public class NativeVideoPlayer
             audio360Sink = new Audio360Sink(spat, ChannelMap.TBE_8_2, latency);
             final OpusRenderer audioRenderer = new OpusRenderer(audio360Sink);
 
-            out.add(audioRenderer);
+            rendererList.add(audioRenderer);
+
+            renderers = rendererList.toArray(renderers);
+            return renderers;
         }
     }
 
@@ -287,16 +319,33 @@ public class NativeVideoPlayer
                 // 2. Create the player
                 //--------------------------------------
                 //- Audio Engine
-
-                engine = AudioEngine.create(SAMPLE_RATE, context);
-                spat = engine.createSpatDecoderQueue();
-                engine.start();
+                if (engine == null) 
+                {
+                    engine = AudioEngine.create(SAMPLE_RATE, BUFFER_SIZE, QUEUE_SIZE_IN_SAMPLES, context);
+                    spat = engine.createSpatDecoderQueue();
+                    engine.start();
+                }
 
                 //--------------------------------------
                 //- ExoPlayer
 
                 // Create our modified ExoPlayer instance
-                exoPlayer = ExoPlayerFactory.newSimpleInstance(new CustomRenderersFactory(context), trackSelector, drmSessionManager);
+                if (exoPlayer != null)
+                {
+                    exoPlayer.release();
+                }
+                exoPlayer = ExoPlayerFactory.newSimpleInstance(context, new CustomRenderersFactory(context), trackSelector, drmSessionManager);
+
+
+                exoPlayer.addListener(new Player.DefaultEventListener() {
+
+                    @Override
+                    public void onPlayerStateChanged(boolean playWhenReady, int playbackState)
+                    {
+                        isPlaying = playWhenReady && (playbackState == Player.STATE_READY || playbackState == Player.STATE_BUFFERING);
+                    }
+
+                });            
 
                 exoPlayer.setVideoSurface( surface );
 
@@ -349,6 +398,14 @@ public class NativeVideoPlayer
                     mediaDrm.release();
                     mediaDrm = null;
                 }
+                if (engine != null)
+                {
+                    engine.destroySpatDecoderQueue(spat);
+                    engine.delete();
+                    spat = null;
+                    engine = null;
+                }
+
             }
         });
     }
@@ -398,5 +455,18 @@ public class NativeVideoPlayer
             }
         });
     
+    }
+
+    public static void setListenerRotationQuaternion(float x, float y, float z, float w)
+    {
+        if (engine != null)
+        {
+            engine.setListenerRotation(new TBQuat(x,y,z,w));
+        }
+    }
+
+    public static boolean getIsPlaying()
+    {
+        return isPlaying;
     }
 }

@@ -1630,6 +1630,31 @@ namespace Oculus.Platform
 
   }
 
+  public static partial class NetSync
+  {
+    /// Sent when the status of a connection has changed.
+    ///
+    public static void SetConnectionStatusChangedNotificationCallback(Message<Models.NetSyncConnection>.Callback callback)
+    {
+      Callback.SetNotificationCallback(
+        Message.MessageType.Notification_NetSync_ConnectionStatusChanged,
+        callback
+      );
+    }
+    
+    /// Sent when the list of known connected sessions has changed. Contains the
+    /// new list of sessions.
+    ///
+    public static void SetSessionsChangedNotificationCallback(Message<Models.NetSyncSessionsChangedNotification>.Callback callback)
+    {
+      Callback.SetNotificationCallback(
+        Message.MessageType.Notification_NetSync_SessionsChanged,
+        callback
+      );
+    }
+    
+  }
+
   public static partial class Net
   {
     /// Indicates that a connection has been established or there's been an error.

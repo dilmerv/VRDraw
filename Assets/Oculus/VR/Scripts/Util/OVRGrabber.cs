@@ -27,6 +27,8 @@ public class OVRGrabber : MonoBehaviour
     public float grabBegin = 0.55f;
     public float grabEnd = 0.35f;
 
+    bool alreadyUpdated = false;
+
     // Demonstrates parenting the held object to the hand's transform when grabbed.
     // When false, the grabbed object is moved every FixedUpdate using MovePosition.
     // Note that MovePosition is required for proper physics simulation. If you set this to true, you can
@@ -34,6 +36,13 @@ public class OVRGrabber : MonoBehaviour
     // tower and noting a complete loss of friction.
     [SerializeField]
     protected bool m_parentHeldObject = false;
+
+    // If true, will move the hand to the transform specified by m_parentTransform, using MovePosition in
+    // FixedUpdate. This allows correct physics behavior, at the cost of some latency.
+    // (If false, the hand can simply be attached to the hand anchor, which updates position in LateUpdate,
+    // gaining us a few ms of reduced latency.)
+    [SerializeField]
+    protected bool m_moveHandPosition = false;
 
     // Child/attached transforms of the grabber, indicating where to snap held objects to (if you snap them).
     // Also used for ranking grab targets in case of multiple candidates.
@@ -63,7 +72,7 @@ public class OVRGrabber : MonoBehaviour
     protected Vector3 m_grabbedObjectPosOff;
     protected Quaternion m_grabbedObjectRotOff;
 	protected Dictionary<OVRGrabbable, int> m_grabCandidates = new Dictionary<OVRGrabbable, int>();
-	protected bool operatingWithoutOVRCameraRig = true;
+	protected bool m_operatingWithoutOVRCameraRig = true;
 
     /// <summary>
     /// The currently grabbed object.
@@ -90,17 +99,16 @@ public class OVRGrabber : MonoBehaviour
         m_anchorOffsetPosition = transform.localPosition;
         m_anchorOffsetRotation = transform.localRotation;
 
-		// If we are being used with an OVRCameraRig, let it drive input updates, which may come from Update or FixedUpdate.
-
-		OVRCameraRig rig = null;
-		if (transform.parent != null && transform.parent.parent != null)
-			rig = transform.parent.parent.GetComponent<OVRCameraRig>();
-
-		if (rig != null)
-		{
-			rig.UpdatedAnchors += (r) => {OnUpdatedAnchors();};
-			operatingWithoutOVRCameraRig = false;
-		}
+        if(!m_moveHandPosition)
+        {
+		    // If we are being used with an OVRCameraRig, let it drive input updates, which may come from Update or FixedUpdate.
+		    OVRCameraRig rig = transform.GetComponentInParent<OVRCameraRig>();
+		    if (rig != null)
+		    {
+			    rig.UpdatedAnchors += (r) => {OnUpdatedAnchors();};
+			    m_operatingWithoutOVRCameraRig = false;
+		    }
+        }
     }
 
     protected virtual void Start()
@@ -122,10 +130,17 @@ public class OVRGrabber : MonoBehaviour
         }
     }
 
-	void FixedUpdate()
+    virtual public void Update()
+    {
+        alreadyUpdated = false;
+    }
+
+    virtual public void FixedUpdate()
 	{
-		if (operatingWithoutOVRCameraRig)
-			OnUpdatedAnchors();
+		if (m_operatingWithoutOVRCameraRig)
+        {
+		    OnUpdatedAnchors();
+        }
 	}
 
     // Hands follow the touch anchors by calling MovePosition each frame to reach the anchor.
@@ -133,17 +148,25 @@ public class OVRGrabber : MonoBehaviour
     // your hands or held objects, you may wish to switch to parenting.
     void OnUpdatedAnchors()
     {
-        Vector3 handPos = OVRInput.GetLocalControllerPosition(m_controller);
-        Quaternion handRot = OVRInput.GetLocalControllerRotation(m_controller);
-        Vector3 destPos = m_parentTransform.TransformPoint(m_anchorOffsetPosition + handPos);
-        Quaternion destRot = m_parentTransform.rotation * handRot * m_anchorOffsetRotation;
-        GetComponent<Rigidbody>().MovePosition(destPos);
-        GetComponent<Rigidbody>().MoveRotation(destRot);
+        // Don't want to MovePosition multiple times in a frame, as it causes high judder in conjunction
+        // with the hand position prediction in the runtime.
+        if (alreadyUpdated) return;
+        alreadyUpdated = true;
+
+        Vector3 destPos = m_parentTransform.TransformPoint(m_anchorOffsetPosition);
+        Quaternion destRot = m_parentTransform.rotation * m_anchorOffsetRotation;
+
+        if (m_moveHandPosition)
+        {
+            GetComponent<Rigidbody>().MovePosition(destPos);
+            GetComponent<Rigidbody>().MoveRotation(destRot);
+        }
 
         if (!m_parentHeldObject)
         {
             MoveGrabbedObject(destPos, destRot);
         }
+
         m_lastPos = transform.position;
         m_lastRot = transform.rotation;
 

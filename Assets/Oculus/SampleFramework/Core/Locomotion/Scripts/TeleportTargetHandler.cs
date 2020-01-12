@@ -123,8 +123,9 @@ public abstract class TeleportTargetHandler : TeleportSupport
 	public virtual Vector3? ConsiderDestination(Vector3 location)
 	{
 		var character = LocomotionTeleport.LocomotionController.CharacterController;
-		var radius = character.radius - character.skinWidth;
-		var skinWidth = character.skinWidth;
+		//float skinWidth = character.skinWidth;
+		float skinWidth = 0.0f;
+		var radius = character.radius - skinWidth;
 
 		var start = location;
 		start.y += radius + skinWidth;

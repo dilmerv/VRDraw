@@ -25,12 +25,14 @@ public class OVRManagerEditor : Editor
 	override public void OnInspectorGUI()
 	{
 #if UNITY_ANDROID
+		OVRProjectConfig projectConfig = OVRProjectConfig.GetProjectConfig();
+		bool hasModified = false;
+
+		// Target Devices
 		EditorGUILayout.LabelField("Target Devices");
 		EditorGUI.indentLevel++;
-		OVRProjectConfig projectConfig = OVRProjectConfig.GetProjectConfig();
 		List<OVRProjectConfig.DeviceType> oldTargetDeviceTypes = projectConfig.targetDeviceTypes;
 		List<OVRProjectConfig.DeviceType> targetDeviceTypes = new List<OVRProjectConfig.DeviceType>(oldTargetDeviceTypes);
-		bool hasModified = false;
 		int newCount = Mathf.Max(0, EditorGUILayout.IntField("Size", targetDeviceTypes.Count));
 		while (newCount < targetDeviceTypes.Count)
 		{
@@ -54,11 +56,30 @@ public class OVRManagerEditor : Editor
 		if (hasModified)
 		{
 			projectConfig.targetDeviceTypes = targetDeviceTypes;
-			OVRProjectConfig.CommitProjectConfig(projectConfig);
 		}
 		EditorGUI.indentLevel--;
 
 		EditorGUILayout.Space();
+
+		// Hand Tracking Support
+		EditorGUI.BeginDisabledGroup(!targetDeviceTypes.Contains(OVRProjectConfig.DeviceType.Quest));
+		EditorGUILayout.LabelField("Input", EditorStyles.boldLabel);
+		OVRProjectConfig.HandTrackingSupport oldHandTrackingSupport = projectConfig.handTrackingSupport;
+		OVRProjectConfig.HandTrackingSupport newHandTrackingSupport = (OVRProjectConfig.HandTrackingSupport)EditorGUILayout.EnumPopup(
+			"Hand Tracking Support", oldHandTrackingSupport);
+		if (newHandTrackingSupport != oldHandTrackingSupport)
+		{
+			projectConfig.handTrackingSupport = newHandTrackingSupport;
+			hasModified = true;
+		}
+		EditorGUILayout.Space();
+		EditorGUI.EndDisabledGroup();
+
+		// apply any pending changes to project config
+		if (hasModified)
+		{
+			OVRProjectConfig.CommitProjectConfig(projectConfig);
+		}
 #endif
 
 		DrawDefaultInspector();

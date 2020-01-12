@@ -78,7 +78,7 @@ namespace Oculus.Platform
           bool HasTestAccessToken = !String.IsNullOrEmpty(StandalonePlatformSettings.OculusPlatformTestUserAccessToken);
           if (PlatformSettings.UseStandalonePlatform)
           {
-            if (!HasTestAccessToken && 
+            if (!HasTestAccessToken &&
             (String.IsNullOrEmpty(StandalonePlatformSettings.OculusPlatformTestUserEmail) ||
             String.IsNullOrEmpty(StandalonePlatformSettings.OculusPlatformTestUserPassword)))
             {
@@ -188,32 +188,18 @@ namespace Oculus.Platform
 #endif
           if (!canEnableARM64Support)
           {
-            EditorGUILayout.HelpBox("ARM64 support requires Unity 2018.1.x or higher.", MessageType.Info);
-            if (PlatformSettings.EnableARM64Support)
+            var msg = "Update your Unity Editor to 2018.1.x or newer to enable Arm64 support";
+            EditorGUILayout.HelpBox(msg, MessageType.Warning);
+            if (IsArm64PluginPlatformEnabled())
             {
-              PlatformSettings.EnableARM64Support = false;
               DisablePluginPlatform(PluginPlatform.Android64);
             }
           }
-
-          GUI.enabled = canEnableARM64Support;
-
-          var enableARM64Label = "Enable ARM64 Support [?]";
-          var enableARM64Hint = "[Experimental] If this is checked, Oculus Platform SDK support for ARM64 mobile devices will be enabled."
-      + " Support for ARM64 must also be correctly configured in the Unity Player Settings to use this feature. Requires Unity 2018.1.x or higher.";
-      bool prevEnableARM64Support = PlatformSettings.EnableARM64Support;
-          PlatformSettings.EnableARM64Support =
-            MakeToggle(new GUIContent(enableARM64Label, enableARM64Hint), PlatformSettings.EnableARM64Support);
-
-          if (prevEnableARM64Support != PlatformSettings.EnableARM64Support)
+          else
           {
-            if (PlatformSettings.EnableARM64Support)
+            if (!IsArm64PluginPlatformEnabled())
             {
               EnablePluginPlatform(PluginPlatform.Android64);
-            }
-            else
-            {
-              DisablePluginPlatform(PluginPlatform.Android64);
             }
           }
 
@@ -394,6 +380,13 @@ namespace Oculus.Platform
         AssetDatabase.Refresh();
         AssetDatabase.SaveAssets();
       }
+    }
+
+    public static bool IsArm64PluginPlatformEnabled()
+    {
+      string path = GetPlatformPluginPath(PluginPlatform.Android64);
+      bool pathAlreadyExists = Directory.Exists(path) || File.Exists(path);
+      return pathAlreadyExists;
     }
 
     public static void EnablePluginPlatform(PluginPlatform platform)

@@ -9,10 +9,12 @@ public class AndroidVideoEditorUtil
     private static readonly string videoPlayerFileName = "Assets/Oculus/SampleFramework/Core/Video/Plugins/Android/java/com/oculus/videoplayer/NativeVideoPlayer.java";
     private static readonly string disabledPlayerFileName = videoPlayerFileName + ".DISABLED";
 
-    private static readonly string gradleSourceSetPath = "$projectDir/../../Assets/Oculus/SampleFramework/Core/Video/Plugins/Android/java";
+#if !UNITY_2018_2_OR_NEWER
+	private static readonly string gradleSourceSetPath = "$projectDir/../../Assets/Oculus/SampleFramework/Core/Video/Plugins/Android/java";
+#endif
 
     private static readonly string audio360PluginPath = "Assets/Oculus/SampleFramework/Core/Video/Plugins/Android/Audio360/audio360.aar";
-    private static readonly string audio360Exo28PluginPath = "Assets/Oculus/SampleFramework/Core/Video/Plugins/Android/Audio360/audio360-exo28.aar";
+    private static readonly string audio360Exo29PluginPath = "Assets/Oculus/SampleFramework/Core/Video/Plugins/Android/Audio360/audio360-exo29.aar";
 
     private static readonly string gradleTemplatePath = "Assets/Plugins/Android/mainTemplate.gradle";
     private static readonly string disabledGradleTemplatePath = gradleTemplatePath + ".DISABLED";
@@ -38,12 +40,15 @@ public class AndroidVideoEditorUtil
 
         // Enable audio plugins
         PluginImporter audio360 = (PluginImporter)AssetImporter.GetAtPath(audio360PluginPath);
-        PluginImporter audio360exo28 = (PluginImporter)AssetImporter.GetAtPath(audio360Exo28PluginPath);
+        PluginImporter audio360exo29 = (PluginImporter)AssetImporter.GetAtPath(audio360Exo29PluginPath);
 
-        audio360.SetCompatibleWithPlatform(BuildTarget.Android, true);
-        audio360exo28.SetCompatibleWithPlatform(BuildTarget.Android, true);
-
-        audio360exo28.SaveAndReimport();
+        if (audio360 != null && audio360exo29 != null)
+        {
+            audio360.SetCompatibleWithPlatform(BuildTarget.Android, true);
+            audio360exo29.SetCompatibleWithPlatform(BuildTarget.Android, true);
+            audio360.SaveAndReimport();
+            audio360exo29.SaveAndReimport();
+        }
 
         // Enable gradle build with exoplayer
         EditorUserBuildSettings.androidBuildSystem = AndroidBuildSystem.Gradle;
@@ -92,17 +97,28 @@ public class AndroidVideoEditorUtil
             }
         }
 
-        // add "compile 'com.google.android.exoplayer:exoplayer:2.8.4'" to dependencies
+        // add "compile 'com.google.android.exoplayer:exoplayer:2.9.5'" to dependencies
         int dependencies = GoToSection("dependencies", lines);
         if (FindInScope("com\\.google\\.android\\.exoplayer:exoplayer", dependencies + 1, lines) == -1)
         {
-            lines.Insert(GetScopeEnd(dependencies + 1, lines), "\tcompile 'com.google.android.exoplayer:exoplayer:2.8.4'");
+            lines.Insert(GetScopeEnd(dependencies + 1, lines), "\tcompile 'com.google.android.exoplayer:exoplayer:2.9.5'");
+        }
+
+        int android = GoToSection("android", lines);
+
+        // add compileOptions to add Java 1.8 compatibility
+        if (FindInScope("compileOptions", android + 1, lines) == -1)
+        {
+            int compileOptionsIndex = GetScopeEnd(android + 1, lines);
+            lines.Insert(compileOptionsIndex, "\t}");
+            lines.Insert(compileOptionsIndex, "\t\ttargetCompatibility JavaVersion.VERSION_1_8");
+            lines.Insert(compileOptionsIndex, "\t\tsourceCompatibility JavaVersion.VERSION_1_8");
+            lines.Insert(compileOptionsIndex, "\tcompileOptions {");
         }
 
         // add sourceSets if Version < 2018.2
 #if !UNITY_2018_2_OR_NEWER
-        int android = GoToSection("android", lines);
-    
+
         if (FindInScope("sourceSets\\.main\\.java\\.srcDir", android + 1, lines) == -1)
         {
             lines.Insert(GetScopeEnd(android + 1, lines), "\tsourceSets.main.java.srcDir \"" + gradleSourceSetPath + "\"");
@@ -126,12 +142,15 @@ public class AndroidVideoEditorUtil
 
         // Disable audio plugins
         PluginImporter audio360 = (PluginImporter)AssetImporter.GetAtPath(audio360PluginPath);
-        PluginImporter audio360exo28 = (PluginImporter)AssetImporter.GetAtPath(audio360Exo28PluginPath);
+        PluginImporter audio360exo29 = (PluginImporter)AssetImporter.GetAtPath(audio360Exo29PluginPath);
 
-        audio360.SetCompatibleWithPlatform(BuildTarget.Android, false);
-        audio360exo28.SetCompatibleWithPlatform(BuildTarget.Android, false);
-
-        audio360exo28.SaveAndReimport();
+        if (audio360 != null && audio360exo29 != null)
+        {
+            audio360.SetCompatibleWithPlatform(BuildTarget.Android, false);
+            audio360exo29.SetCompatibleWithPlatform(BuildTarget.Android, false);
+            audio360.SaveAndReimport();
+            audio360exo29.SaveAndReimport();
+        }
 
         // remove exoplayer and sourcesets from gradle file (leave other parts since they are harmless).
         if (File.Exists(gradleTemplatePath))

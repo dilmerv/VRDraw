@@ -36,6 +36,13 @@ namespace Oculus.Platform
       Livestreaming_StopStream                      = 0x44E40DCA,
       Livestreaming_UpdateCommentsOverlayVisibility = 0x1F7D8034,
       Livestreaming_UpdateMicStatus                 = 0x1C577D87,
+      NetSync_Connect                               = 0x646D855F,
+      NetSync_Disconnect                            = 0x1569FEB5,
+      NetSync_GetSessions                           = 0x6ED60A35,
+      NetSync_SetVoipGroup                          = 0x58129C8E,
+      NetSync_SetVoipMicSource                      = 0x3302F770,
+      NetSync_SetVoipSessionMuted                   = 0x5585FF0A,
+      NetSync_SetVoipStreamMode                     = 0x67E19D37,
       Party_Create                                  = 0x1AD31B4F,
       Party_GatherInApplication                     = 0x7287C183,
       Party_Get                                     = 0x5E8953BD,
@@ -90,6 +97,8 @@ namespace Oculus.Platform
         case MessageTypeInternal.Colocation_ShareMap:
         case MessageTypeInternal.Livestreaming_StopPartyStream:
         case MessageTypeInternal.Livestreaming_UpdateMicStatus:
+        case MessageTypeInternal.NetSync_SetVoipGroup:
+        case MessageTypeInternal.NetSync_SetVoipMicSource:
         case MessageTypeInternal.Party_Leave:
         case MessageTypeInternal.User_CancelRecordingForReportFlow:
         case MessageTypeInternal.User_TestUserCreateDeviceManifest:
@@ -131,6 +140,20 @@ namespace Oculus.Platform
 
         case MessageTypeInternal.Livestreaming_StopStream:
           message = new MessageWithLivestreamingVideoStats(messageHandle);
+          break;
+
+        case MessageTypeInternal.NetSync_Connect:
+        case MessageTypeInternal.NetSync_Disconnect:
+          message = new MessageWithNetSyncConnection(messageHandle);
+          break;
+
+        case MessageTypeInternal.NetSync_GetSessions:
+          message = new MessageWithNetSyncSessionList(messageHandle);
+          break;
+
+        case MessageTypeInternal.NetSync_SetVoipSessionMuted:
+        case MessageTypeInternal.NetSync_SetVoipStreamMode:
+          message = new MessageWithNetSyncSetSessionPropertyResult(messageHandle);
           break;
 
         case MessageTypeInternal.Party_Get:

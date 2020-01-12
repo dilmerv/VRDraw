@@ -528,13 +528,27 @@ public struct OVRPose
 		return ret;
 	}
 
-	public OVRPlugin.Posef ToPosef()
+	// Warning: this function is not a strict reverse of OVRPlugin.Posef.ToOVRPose(), even after flipZ()
+	public OVRPlugin.Posef ToPosef_Legacy()
 	{
 		return new OVRPlugin.Posef()
 		{
 			Position = position.ToVector3f(),
 			Orientation = orientation.ToQuatf()
 		};
+	}
+
+	public OVRPlugin.Posef ToPosef()
+	{
+		OVRPlugin.Posef result = new OVRPlugin.Posef();
+		result.Position.x = position.x;
+		result.Position.y = position.y;
+		result.Position.z = -position.z;
+		result.Orientation.x = -orientation.x;
+		result.Orientation.y = -orientation.y;
+		result.Orientation.z = orientation.z;
+		result.Orientation.w = orientation.w;
+		return result;
 	}
 }
 

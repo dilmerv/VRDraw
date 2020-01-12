@@ -6174,11 +6174,12 @@ MonoBehaviour:
   grabBegin: 0.55
   grabEnd: 0.35
   m_parentHeldObject: 0
+  m_moveHandPosition: 0
   m_gripTransform: {fileID: 1931687997}
   m_grabVolumes:
   - {fileID: 1931688001}
   m_controller: 2
-  m_parentTransform: {fileID: 0}
+  m_parentTransform: {fileID: 2080101483}
   m_player: {fileID: 2080101485}
 --- !u!54 &2080101480
 Rigidbody:
@@ -6209,11 +6210,12 @@ MonoBehaviour:
   grabBegin: 0.55
   grabEnd: 0.35
   m_parentHeldObject: 0
+  m_moveHandPosition: 0
   m_gripTransform: {fileID: 2050042248}
   m_grabVolumes:
   - {fileID: 2050042252}
   m_controller: 1
-  m_parentTransform: {fileID: 0}
+  m_parentTransform: {fileID: 2080101484}
   m_player: {fileID: 2080101485}
 --- !u!54 &2080101482
 Rigidbody:

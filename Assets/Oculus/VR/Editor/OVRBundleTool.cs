@@ -1,3 +1,4 @@
+#if UNITY_EDITOR_WIN
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -7,7 +8,6 @@ using System.IO;
 
 using UnityEngine;
 using UnityEditor;
-
 public class OVRBundleTool : EditorWindow
 {
 	private static List<EditorSceneInfo> buildableScenes;
@@ -67,7 +67,7 @@ public class OVRBundleTool : EditorWindow
 
 	private static ApkStatus currentApkStatus;
 
-	[MenuItem("Oculus/OVR Build/OVR Scene Quick Preview #p", false, 10)]
+	[MenuItem("Oculus/OVR Build/OVR Scene Quick Preview %l", false, 10)]
 	static void Init()
 	{
 		currentApkStatus = ApkStatus.UNKNOWN;
@@ -370,7 +370,7 @@ public class OVRBundleTool : EditorWindow
 		if (adbTool.isReady)
 		{
 			string matchedPackageList, error;
-			var transitionPackageName = PlayerSettings.applicationIdentifier;
+			var transitionPackageName = PlayerSettings.GetApplicationIdentifier(BuildTargetGroup.Android);
 			if (useOptionalTransitionApkPackage)
 			{
 				transitionPackageName += ".transition";
@@ -482,4 +482,10 @@ public class OVRBundleTool : EditorWindow
 		}
 		return eEnum.ToString();
 	}
+
+	public static bool GetUseOptionalTransitionApkPackage()
+	{
+		return useOptionalTransitionApkPackage;
+	}
 }
+#endif
